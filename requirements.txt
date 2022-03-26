@@ -2,5 +2,6 @@ numpy>=1.21.5
 torch>=1.10.2
 torchvision>=0.11.3
 flwr[simulation]>=0.17
+matplotlib>=3.3
+flake8==4.0.1
 pre-commit
-matplotlib
