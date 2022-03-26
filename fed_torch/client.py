@@ -154,7 +154,7 @@ class TorchClient(fl.client.Client):
         # parsing fit configurations
         configs = ins.config
         epochs = int(configs["epochs"])
-        learning_rate = int(configs["learning_rate"])
+        learning_rate = float(configs["learning_rate"])
 
         # set model parameters
         weights = parameters_to_weights(ins.parameters)
