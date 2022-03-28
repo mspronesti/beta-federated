@@ -1,10 +1,8 @@
-import torch
 import torch.nn as nn
-from flwr.common import Weights
-from collections import OrderedDict
+from .model_base import ModelBase
 
 
-class LeNet(nn.Module):
+class LeNet(ModelBase):
     def __init__(self, in_features=3, num_classes=10):
         """
         Constructs a LeNet Convolutional Neural Network Model
@@ -38,14 +36,3 @@ class LeNet(nn.Module):
         x = self.act(self.f1(x))
         x = self.act(self.f2(x))
         return self.act(self.f3(x))
-
-    def get_weights(self) -> Weights:
-        """Get model weights as a list of NumPy ndarrays."""
-        return [val.cpu().numpy() for _, val in self.state_dict().items()]
-
-    def set_weights(self, weights: Weights) -> None:
-        """Set model weights from a list of NumPy ndarrays."""
-        state_dict = OrderedDict(
-            {k: torch.tensor(v) for k, v in zip(self.state_dict().keys(), weights)}
-        )
-        self.load_state_dict(state_dict, strict=True)

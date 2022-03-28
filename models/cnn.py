@@ -1,10 +1,9 @@
 import torch
 import torch.nn as nn
-from flwr.common import Weights
-from collections import OrderedDict
+from .model_base import ModelBase
 
 
-class CNN(nn.Module):
+class CNN(ModelBase):
     def __init__(self, in_features: int = 3, num_classes=10):
         """
         Constructs a Convolutional Neural Network Model using
@@ -44,14 +43,3 @@ class CNN(nn.Module):
         x = torch.flatten(x, 1)
         x = self.act(self.fc1(x))
         return self.fc2(x)
-
-    def get_weights(self) -> Weights:
-        """Get model weights as a list of NumPy ndarrays."""
-        return [val.cpu().numpy() for _, val in self.state_dict().items()]
-
-    def set_weights(self, weights: Weights) -> None:
-        """Set model weights from a list of NumPy ndarrays."""
-        state_dict = OrderedDict(
-            {k: torch.tensor(v) for k, v in zip(self.state_dict().keys(), weights)}
-        )
-        self.load_state_dict(state_dict, strict=True)
