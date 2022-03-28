@@ -1,0 +1,18 @@
+device: 'cuda:0'
+
+n_rounds: 5
+epochs: 5
+n_clients: 10
+fraction: 0.1
+batch_size: 16
+lr: 0.001
+iid: False
+
+seed: 2022
+
+root: ${env:PWD}
+savedir: ${env:PWD}/../output/${now:%Y-%m-%d_%H-%M-%S}
+
+hydra:
+  run:
+    dir: ${env:PWD}/../output/${now:%Y-%m-%d_%H-%M-%S}

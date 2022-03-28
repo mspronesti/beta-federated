@@ -105,4 +105,7 @@ venv.bak/
 cython_debug/
 
 # datasets
-fed_torch/data/
+data/
+
+# hydra
+output/
