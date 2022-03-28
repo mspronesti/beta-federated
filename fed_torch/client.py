@@ -1,5 +1,4 @@
-from typing import Optional, Tuple
-from collections import OrderedDict
+from typing import Optional, Tuple, Union
 
 import logging
 
@@ -21,6 +20,12 @@ from flwr.common import (
 )
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# Configure console logger
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+logger.addHandler(console_handler)
 
 
 class TorchClient(fl.client.Client):
@@ -53,10 +58,11 @@ class TorchClient(fl.client.Client):
                 Admitted values: cpu, cuda,
         """
         self.id = client_id
-        self.model = model.to(torch.device(device))
+        self.model = model.to(device)
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
-        self.device = torch.device(device)
+
+        self._set_device(device)
 
     def get_parameters(self) -> ParametersRes:
         """
@@ -72,20 +78,27 @@ class TorchClient(fl.client.Client):
         return ParametersRes(parameters=parameters)
 
     def get_model_weights(self) -> fl.common.Weights:
-        return [values.cpu().numpy() for _, values in self.model.state_dict().items()]
+        """Retrieves model's weights (flower.common.Weights object)"""
+        return self.model.get_weights()
 
     def set_model_weights(self, weights: fl.common.Weights):
         """Set model weights from a flwr.common.Weights object"""
-        # it's important they are sorted!
-        state_dict = OrderedDict(
-            {
-                k: torch.Tensor(v)
-                for k, v in zip(self.model.state_dict().keys(), weights)
-            }
-        )
-        self.model.load_state_dict(state_dict)
+        self.model.set_weights(weights)
 
-    def _fit_helper(self, epochs: int = 300, learning_rate: float = 0.001) -> int:
+    def _set_device(self, device: Union[str, torch.device]):
+        """Helper to set torch device given a strong or a proper device"""
+        if isinstance(device, str):
+            # exception in case of wrong name left to
+            # torch.device
+            self.device = torch.device(device)
+        elif isinstance(device, torch.device):
+            self.device = device
+        else:
+            raise ValueError(f"Unknown device {device} passed to client {self.id}")
+
+    def _fit_helper(
+        self, epochs: int = 300, learning_rate: float = 0.001, momentum: float = 0.9
+    ) -> int:
         """
         Helper method to train the PyTorch model at client level
 
@@ -103,7 +116,7 @@ class TorchClient(fl.client.Client):
         criterion = nn.CrossEntropyLoss()
         # stochastic gradient descend with fixed momentum
         # and given learning rate
-        optimizer = SGD(self.model.parameters(), lr=learning_rate, momentum=0.9)
+        optimizer = SGD(self.model.parameters(), lr=learning_rate, momentum=momentum)
 
         self.model.to(self.device)
         self.model.train()
@@ -189,6 +202,9 @@ class TorchClient(fl.client.Client):
         correct: int = 0
         test_size: int = 0
         num_examples: int = 0
+
+        self.model.to(self.device)
+        self.model.train()
         with torch.no_grad():
             for data in self.test_dataloader:
                 # extract data
