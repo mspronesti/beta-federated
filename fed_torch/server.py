@@ -1,4 +1,5 @@
 import flwr as fl
+import flwr.server.strategy
 import torch.nn
 from flwr.common import weights_to_parameters, FitIns, EvaluateIns
 from client import TorchClient
@@ -21,7 +22,7 @@ def thread_function(i, train_loader, test_loader, model: torch.nn.Module):
     )
 
     fit_ins = FitIns(
-        parameters=weights_to_parameters(model.get_model_weights()),
+        parameters=weights_to_parameters(model.get_weights()),
         config={"epochs": 1, "learning_rate": 0.1},
     )
 
@@ -29,6 +30,15 @@ def thread_function(i, train_loader, test_loader, model: torch.nn.Module):
 
     evaluate_ins = EvaluateIns(parameters=fit_res.parameters, config={})
     client.evaluate(ins=evaluate_ins)
+
+
+def start_server(strategy: flwr.server.strategy.Strategy) -> None:
+    # Start Flower server for ten rounds of federated learning
+    fl.server.start_server(
+        server_address="[::]:8080",
+        config={"num_rounds": 10},
+        strategy=strategy,
+    )
 
 
 def main():
@@ -42,12 +52,8 @@ def main():
         server_momentum=0.9,  # TO BE CHANGED
     )
 
-    # Start Flower server for ten rounds of federated learning
-    fl.server.start_server(
-        server_address="[::]:8080",
-        config={"num_rounds": 10},
-        strategy=strategy,
-    )
+    x = threading.Thread(target=start_server, args=([strategy]))
+    x.start()
 
     N_CLIENTS = 10
 
@@ -64,9 +70,11 @@ def main():
         test_dataset, batch_size * 2, num_workers=4, pin_memory=True
     )
 
+    cnn = CNN()
+
     for i in range(N_CLIENTS):
         x = threading.Thread(
-            target=thread_function, args=([i, train_loader, test_loader, CNN])
+            target=thread_function, args=([i, train_loader, test_loader, cnn])
         )
         x.start()
 

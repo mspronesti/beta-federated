@@ -53,10 +53,10 @@ class TorchClient(fl.client.Client):
                 Admitted values: cpu, cuda,
         """
         self.id = client_id
-        self.model = model.to(device)
+        self.model = model.to(torch.device(device))
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
-        self.device = device
+        self.device = torch.device(device)
 
     def get_parameters(self) -> ParametersRes:
         """
