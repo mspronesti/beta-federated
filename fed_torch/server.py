@@ -47,6 +47,7 @@ def set_all_seeds(seed):
     np.random.seed(seed)
 
 
+# TODO: move this main outside server
 @hydra.main(config_path="../config/", config_name="config.yaml")
 def main(cfg):
     set_all_seeds(cfg.seed)

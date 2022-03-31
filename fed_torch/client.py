@@ -1,7 +1,5 @@
 from typing import Optional, Tuple, Union
 
-import logging
-
 import torch
 import torch.nn as nn
 
@@ -19,13 +17,7 @@ from flwr.common import (
     parameters_to_weights,
 )
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-# Configure console logger
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-logger.addHandler(console_handler)
+from logger import logger
 
 
 class TorchClient(fl.client.Client):
@@ -48,10 +40,10 @@ class TorchClient(fl.client.Client):
                 a torch-compatible model to be run from
                 this client
             train_dataloader:
-                a DataLoader object to get the train dataset
+                a DataLoader object to get the train datasets
                 (which must stay at client level)
             test_dataloader:
-                a DataLoader object to get the train dataset
+                a DataLoader object to get the train datasets
                 (which must stay at client level)
             device:
                 a string identifying a valid torch device.
@@ -229,7 +221,7 @@ class TorchClient(fl.client.Client):
 
     def evaluate(self, ins: EvaluateIns) -> EvaluateRes:
         """
-        Evaluate the provided weights using the locally held dataset.
+        Evaluate the provided weights using the locally held datasets.
         Overrides the base class abc method
 
         Args:
