@@ -1,7 +1,8 @@
 import numpy as np
 import torchvision
 from cifar_local_dataset import CifarLocalDataset
-from mnist_local_dataset import MnistLocalDataset
+
+# from mnist_local_dataset import MnistLocalDataset
 
 
 class DistributeDataset:
@@ -14,7 +15,7 @@ class DistributeDataset:
             the training datasets
         test:
             test datasets
-        n_client:
+        n_clients:
             number of clients
         divergence:
             how spread are the classes [0,1]
@@ -26,12 +27,13 @@ class DistributeDataset:
             num of sample per each class inside the datasets
     """
 
-    def __init__(self,
-                 dataset,
-                 download_path,
-                 download=False,
-                 n_client=1,
-                 ):
+    def __init__(
+        self,
+        dataset,
+        download_path,
+        download=True,
+        n_clients=1,
+    ):
         """
         Args:
             dataset:
@@ -47,35 +49,32 @@ class DistributeDataset:
         self.divergence = None
         self.client_datasets = None
 
-        assert (n_client > 0)
-        self.n_client = n_client
-        self.client_range = np.linspace(0, 1, n_client + 1)
+        assert n_clients > 0
+        self.n_clients = n_clients
+        self.client_range = np.linspace(0, 1, n_clients + 1)
 
-        if dataset == 'CIFAR10':
+        if dataset == "CIFAR10":
             download_dataset = torchvision.datasets.CIFAR10
 
-        elif dataset == 'CIFAR100':
+        elif dataset == "CIFAR100":
             download_dataset = torchvision.datasets.CIFAR100
 
-        elif dataset == 'MNIST':
+        elif dataset == "MNIST":
             download_dataset = torchvision.datasets.MNIST
 
         else:
-            raise ValueError(f"Unknown dataset {dataset}. ",
-                             "Valid values are CIFAR10, CIFAR100 and MNIST")
+            raise ValueError(
+                f"Unknown dataset {dataset}. ",
+                "Valid values are CIFAR10, CIFAR100 and MNIST",
+            )
 
-        self.train = download_dataset(root=download_path,
-                                      train=True,
-                                      download=download)
-        self.test = download_dataset(root=download_path,
-                                     train=False,
-                                     download=download)
+        self.train = download_dataset(root=download_path, train=True, download=download)
+        self.test = download_dataset(root=download_path, train=False, download=download)
 
         # TODO check: the datasets must be balance
         self.sample_per_class = len(self.train) // len(self.train.classes)
 
-    def divide_dataset(self,
-                       divergence):
+    def divide_dataset(self, divergence):
         """
         divide the datasets according to the divergence.
         - 0 means to have (mostly) a uniform distribution of the classes among clients
@@ -86,7 +85,9 @@ class DistributeDataset:
                 Float, how spread are the classes [0,1]
         """
         if not 0 <= divergence <= 1:
-            raise RuntimeError(f'Expected divergence to be between 0 and 1, got {divergence}')
+            raise RuntimeError(
+                f"Expected divergence to be between 0 and 1, got {divergence}"
+            )
 
         self.divergence = divergence
 
@@ -97,18 +98,14 @@ class DistributeDataset:
             class_clients = self.get_index(b=2, uniform=False)
 
         # creates the local datasets
-        client_datasets = self._create_local_dataset(self.n_client,
-                                                     class_clients,
-                                                     self.train.data,
-                                                     np.array(self.train.targets))
+        client_datasets = self._create_local_dataset(
+            self.n_clients, class_clients, self.train.data, np.array(self.train.targets)
+        )
         self.client_datasets = client_datasets
 
         return client_datasets
 
-    def get_index(self,
-                  b=None,
-                  uniform=True
-                  ):
+    def get_index(self, b=None, uniform=True):
         """
         Args:
             b: b parameter of the beta distributions
@@ -124,35 +121,32 @@ class DistributeDataset:
 
         if uniform:
             # number of class elements per client
-            element_per_class = self.sample_per_class // self.n_client
+            element_per_class = self.sample_per_class // self.n_clients
 
-            class_client_mat = self.uniform_sampling(self.n_client,
-                                                     element_per_class,
-                                                     self.sample_per_class,
-                                                     sort_classes_i,
-                                                     len(self.train.classes)
-                                                     # TODO check: not all class in training
-                                                     )
+            class_client_mat = self.uniform_sampling(
+                self.n_clients,
+                element_per_class,
+                self.sample_per_class,
+                sort_classes_i,
+                len(self.train.classes)
+                # TODO check: not all class in training
+            )
 
-            expected = (len(self.train.classes), self.n_client, element_per_class)
+            expected = (len(self.train.classes), self.n_clients, element_per_class)
             if class_client_mat.shape != expected:
-                raise RuntimeError(f'Expected shape {expected}, got {class_client_mat.shape}')
+                raise RuntimeError(
+                    f"Expected shape {expected}, got {class_client_mat.shape}"
+                )
 
             return class_client_mat
 
-    def uniform_sampling(self,
-                         n_client,
-                         num_sample,
-                         tot_class,
-                         sort_label,
-                         n_label
-                         ):
+    def uniform_sampling(self, n_clients, num_sample, tot_class, sort_label, n_label):
         """
         Each element of the returned table contains the list of index associated
         with the i_th class for the j_th client
 
         Args:
-            n_client:
+            n_clients:
                 num of clients
             num_sample:
                 num. of sample we want for each class and client
@@ -173,13 +167,14 @@ class DistributeDataset:
 
         for class_ in range(n_label):  # for each class
             sampling_clients = []
-            for client in range(n_client):  # for each client
+            for client in range(n_clients):  # for each client
 
                 # TODO add: implement generator with fixed seed
                 # extract randomly the selected classes from
-                class_sampling = np.random.choice(sort_label[start:end],
-                                                  num_sample,
-                                                  )
+                class_sampling = np.random.choice(
+                    sort_label[start:end],
+                    num_sample,
+                )
                 sampling_clients.append(class_sampling)
 
             # next for on the next class
@@ -189,35 +184,40 @@ class DistributeDataset:
 
         return np.array(matrix_class_client)
 
-    def _create_local_dataset(self,
-                              n_client,
-                              class_clients_mat,
-                              data,
-                              labels,
-                              ):
+    def _create_local_dataset(
+        self,
+        n_clients,
+        class_clients_mat,
+        data,
+        labels,
+    ):
         """
         Args:
-            n_client:
+            n_clients:
                 number of clients
             class_clients_mat:
-                matrix (n_classes, n_client, num_sample)
+                matrix (n_classes, n_clients, num_sample)
             data:
                 numpy array (batch_size, h, w, channel)
             labels:
                 numpy array (num_labels, 1)
         """
-        local_class = CifarLocalDataset if self.dataset.startswith('CIFAR') else MnistLocalDataset
+        # local_class = (
+        #     CifarLocalDataset if self.dataset.startswith("CIFAR") else MnistLocalDataset
+        # )
 
         client_datasets = []
-        for j in range(n_client):
+        for j in range(n_clients):
             client_indexes = class_clients_mat[:, j].flatten()
 
             unique_labels_count = np.unique(labels)
 
-            dataset = CifarLocalDataset(data[client_indexes],
-                                        labels[client_indexes],
-                                        unique_labels_count,
-                                        client_id=j)
+            dataset = CifarLocalDataset(
+                data[client_indexes],
+                labels[client_indexes],
+                unique_labels_count,
+                client_id=j,
+            )
 
             client_datasets.append(dataset)
 

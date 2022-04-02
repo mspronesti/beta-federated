@@ -1,4 +1,3 @@
-from functools import partial
 from typing import Dict
 
 import flwr as fl
@@ -14,12 +13,35 @@ from torchvision.datasets import CIFAR10
 from torchvision.transforms import ToTensor
 
 from client import TorchClient
+
+# from datasets import DistributeDataset
 from models import LeNet
 
 
-def client_fn(client_id, model, train_loader, test_loader, device):
+def client_fn(cid, batch_size, device, n_clients):
+
+    # Download CIFAR10
+    train_dataset = CIFAR10(
+        root="../../fed_torch/data/", download=True, train=True, transform=ToTensor()
+    )
+    test_dataset = CIFAR10(
+        root="../../fed_torch/data/", download=True, train=False, transform=ToTensor()
+    )
+
+    # TODO: pass to a client only its portion of dataset and not the entire dataset
+
+    train_loader = DataLoader(
+        train_dataset, batch_size, shuffle=True, num_workers=4, pin_memory=True
+    )
+    test_loader = DataLoader(
+        test_dataset, batch_size * 2, num_workers=4, pin_memory=True
+    )
+
+    # model
+    model = LeNet()
+
     return TorchClient(
-        client_id=client_id,
+        client_id=cid,
         model=model,
         train_dataloader=train_loader,
         test_dataloader=test_loader,
@@ -52,27 +74,14 @@ def set_all_seeds(seed):
 def main(cfg):
     set_all_seeds(cfg.seed)
 
-    # extract configs
-    batch_size = cfg.batch_size
+    n_rounds = cfg.n_rounds
     fraction = cfg.fraction
     n_clients = cfg.n_clients
-    n_rounds = cfg.n_rounds
-    n_epochs = cfg.epochs
+    epochs = cfg.epochs
     lr = cfg.lr
+    batch_size = cfg.batch_size
     device = cfg.device
 
-    # Download CIFAR10
-    train_dataset = CIFAR10(root="data/", download=True, transform=ToTensor())
-    test_dataset = CIFAR10(root="data/", train=False, transform=ToTensor())
-
-    train_loader = DataLoader(
-        train_dataset, batch_size, shuffle=True, num_workers=4, pin_memory=True
-    )
-    test_loader = DataLoader(
-        test_dataset, batch_size * 2, num_workers=4, pin_memory=True
-    )
-
-    # model
     model = LeNet()
 
     # Define strategy
@@ -88,19 +97,16 @@ def main(cfg):
         # connected to the server before a
         # training round can start
         # server_momentum=0.9,  # TO BE CHANGED
-        on_fit_config_fn=fit_config_fn({"epochs": n_epochs, "learning_rate": lr}),
+        on_fit_config_fn=fit_config_fn({"epochs": epochs, "learning_rate": lr}),
         initial_parameters=weights_to_parameters(model.get_weights()),
     )
 
+    clients_ids = np.arange(n_clients)
+
     # Start simulation
     fl.simulation.start_simulation(
-        client_fn=partial(
-            client_fn,
-            model=model,
-            train_loader=train_loader,
-            test_loader=test_loader,
-            device=device,
-        ),
+        client_fn=lambda cid: client_fn(cid, batch_size, device, n_clients),
+        clients_ids=clients_ids,
         num_clients=n_clients,
         num_rounds=n_rounds,
         client_resources={"num_cpus": 2},
