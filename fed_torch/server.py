@@ -7,11 +7,9 @@ import torch.nn
 from flwr.common import weights_to_parameters
 from flwr.server.strategy import FedAvg
 from torch.utils.data.dataloader import DataLoader
-import os
 
 # from strategies import FedAvgM
-from torchvision.datasets import CIFAR10
-from torchvision.transforms import ToTensor
+
 
 from client import TorchClient
 
@@ -20,10 +18,10 @@ from datasets import DistributeDataset
 from models import LeNet
 
 
-def client_fn(cid, datasets, batch_size, device, base_path):
+def client_fn(cid, datasets, batch_size, device):
     train_dataset = datasets[0][cid]
     test_dataset = datasets[0][cid]
-
+    # TODO: use hardware_concurrency to pick optimal number of workers
     train_loader = DataLoader(
         train_dataset, batch_size, shuffle=True, num_workers=4, pin_memory=True
     )
@@ -63,7 +61,6 @@ def set_all_seeds(seed):
     np.random.seed(seed)
 
 
-# TODO: move this main outside server
 @hydra.main(config_path="../config/", config_name="config.yaml")
 def main(cfg):
     set_all_seeds(cfg.seed)
@@ -79,6 +76,7 @@ def main(cfg):
     dataset = cfg.dataset
     download_path = cfg.dataset_download_path
 
+    # TODO: parametrize this!
     model = LeNet()
 
     # Define strategy
@@ -101,22 +99,19 @@ def main(cfg):
     clients_ids = np.arange(n_clients)
 
     # Define Datasets
-    distribute_dataset = DistributeDataset(dataset,
-                                           download_path,
-                                           n_clients=n_clients)
+    distribute_dataset = DistributeDataset(dataset, download_path, n_clients=n_clients)
 
     datasets = distribute_dataset.divide_dataset(divergence)
 
     # Start simulation
     fl.simulation.start_simulation(
-        client_fn=lambda cid: client_fn(cid, datasets,  batch_size, device, download_path),
+        client_fn=lambda cid: client_fn(cid, datasets, batch_size, device),
         clients_ids=clients_ids,
         num_clients=n_clients,
         num_rounds=n_rounds,
         client_resources={"num_cpus": 2},
         strategy=strategy,
     )
-    #client_fn(0, datasets, batch_size, device, download_path)
 
 
 if __name__ == "__main__":

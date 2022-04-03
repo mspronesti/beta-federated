@@ -4,11 +4,11 @@ dataset: cifar10
 dataset_download_path: ../../datasets/data/
 divergence: 0
 n_rounds: 1
-epochs: 1
-n_clients: 5
+epochs: 50 # increase this
+n_clients: 3 # increase this
 fraction: 0.8
 batch_size: 16
-lr: 0.9
+lr: 0.001
 
 seed: 2022
 root: ${hydra:runtime.cwd}

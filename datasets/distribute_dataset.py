@@ -1,13 +1,10 @@
+from typing import Tuple, List
+
 import numpy as np
 import torchvision
-import torch
 from torch.utils.data import Dataset
 
 from .cifar_local_dataset import CifarLocalDataset
-from torch.utils.data.dataloader import DataLoader
-
-
-# from mnist_local_dataset import MnistLocalDataset
 
 
 class DistributeDataset:
@@ -26,18 +23,14 @@ class DistributeDataset:
             how spread are the classes [0,1]
         client_range:
             array containing the x-range on beta distribution.
-        client_datasets:
-            the clients LocalDataset after the datasets split
-        size_class:
-            num of sample per each class inside the datasets
     """
 
     def __init__(
-            self,
-            dataset: str,
-            download_path: str,
-            download=True,
-            n_clients=1,
+        self,
+        dataset: str,
+        download_path: str,
+        download=True,
+        n_clients=1,
     ):
         """
         Args:
@@ -48,11 +41,10 @@ class DistributeDataset:
             download:
                 Boolean, to download the datasets or not
         """
-        # Used to remove security controls
-        # Windows bug
-
-        import ssl
-        ssl._create_default_https_context = ssl._create_unverified_context
+        # if you're on Windows and you have problems downloading
+        # the dataset, uncomment the following two lines
+        # import ssl
+        # ssl._create_default_https_context = ssl._create_unverified_context
 
         dataset = dataset.upper()
 
@@ -85,13 +77,11 @@ class DistributeDataset:
         self.train = download_dataset(root=download_path, train=True, download=download)
         self.test = download_dataset(root=download_path, train=False, download=download)
 
-        # TODO check: the datasets must be balance
+        # TODO check: the datasets must be balanced
         self.size_class_train = len(self.train) // len(self.train.classes)
         self.size_class_test = len(self.test) // len(self.test.classes)
 
-    def divide_dataset(self,
-                       divergence: float
-                       ) -> tuple[list[Dataset], list[Dataset]]:
+    def divide_dataset(self, divergence: float) -> Tuple[List[Dataset], List[Dataset]]:
         """
         divide the datasets according to the divergence.
         - 0 means to have (mostly) a uniform distribution of the classes among clients
@@ -116,23 +106,17 @@ class DistributeDataset:
 
         # creates the local datasets
         client_datasets_train = self._create_local_dataset(
-            class_clients[0],
-            self.train.data,
-            np.array(self.train.targets)
+            class_clients[0], self.train.data, np.array(self.train.targets)
         )
         client_datasets_test = self._create_local_dataset(
-            class_clients[1],
-            self.train.data,
-            np.array(self.train.targets)
+            class_clients[1], self.train.data, np.array(self.train.targets)
         )
         self.client_datasets_train = client_datasets_train
         self.client_datasets_test = client_datasets_test
 
         return client_datasets_train, client_datasets_test
 
-    def get_index(self,
-                  b=None,
-                  uniform=True):
+    def get_index(self, b: float = None, uniform: bool = True):
         """
         Calculates the indexes for each client. The indexes are then used to sample
         from the entire dataset.
@@ -152,8 +136,10 @@ class DistributeDataset:
             ]
 
         Args:
-            b: b parameter of the beta distributions
-            uniform: Boolean indicating whether uniform distribution
+            b:
+                the "beta" parameter of the Beta distributions
+            uniform:
+                boolean indicating whether uniform distribution
 
         Returns:
             class_client_mat:
@@ -166,7 +152,6 @@ class DistributeDataset:
         sort_classes_test = np.argsort(self.test.targets)
 
         if uniform:
-
             class_client_train = self.uniform_sampling(
                 self.size_class_train // self.n_clients,
                 sort_classes_train,
@@ -178,17 +163,18 @@ class DistributeDataset:
                 self.size_class_test // self.n_clients,
                 sort_classes_test,
                 len(self.test.classes),
-                self.size_class_test
+                self.size_class_test,
             )
 
             return class_client_train, class_client_test
 
-    def uniform_sampling(self,
-                         class_elements_per_client: int,
-                         sort_label: np.array,
-                         n_label: int,
-                         size_class: int
-                         ):
+    def uniform_sampling(
+        self,
+        class_elements_per_client: int,
+        sort_label: np.array,
+        n_label: int,
+        size_class: int,
+    ):
         """
         Each element of the returned table contains the list of index associated
         with the i_th class for the j_th client
@@ -222,9 +208,7 @@ class DistributeDataset:
                 # TODO add: implement generator with fixed seed
                 # extract randomly the selected classes from
                 class_sampling = np.random.choice(
-                    sort_label[start:end],
-                    class_elements_per_client,
-                    replace=False
+                    sort_label[start:end], class_elements_per_client, replace=False
                 )
                 sampling_clients.append(class_sampling)
 
@@ -236,10 +220,10 @@ class DistributeDataset:
         return np.array(matrix_class_client)
 
     def _create_local_dataset(
-            self,
-            class_clients_mat: np.array,
-            data: np.array,
-            labels: np.array,
+        self,
+        class_clients_mat: np.array,
+        data: np.array,
+        labels: np.array,
     ):
         """
         Args:
@@ -272,6 +256,8 @@ class DistributeDataset:
         return client_datasets
 
 
+# Just here to quickly play around during development
+"""
 def main():
     distribute_class = DistributeDataset('CIFAR10',
                                          'data',
@@ -300,3 +286,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+"""
