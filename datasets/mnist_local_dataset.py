@@ -1,6 +1,6 @@
 from torchvision import transforms
 import PIL.Image as Image
-from local_dataset import LocalDataset
+from .local_dataset import LocalDataset
 
 
 class MnistLocalDataset(LocalDataset):

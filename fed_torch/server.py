@@ -7,6 +7,7 @@ import torch.nn
 from flwr.common import weights_to_parameters
 from flwr.server.strategy import FedAvg
 from torch.utils.data.dataloader import DataLoader
+import os
 
 # from strategies import FedAvgM
 from torchvision.datasets import CIFAR10
@@ -15,20 +16,13 @@ from torchvision.transforms import ToTensor
 from client import TorchClient
 
 # from datasets import DistributeDataset
+from datasets import DistributeDataset
 from models import LeNet
 
 
-def client_fn(cid, batch_size, device, n_clients):
-
-    # Download CIFAR10
-    train_dataset = CIFAR10(
-        root="../../fed_torch/data/", download=True, train=True, transform=ToTensor()
-    )
-    test_dataset = CIFAR10(
-        root="../../fed_torch/data/", download=True, train=False, transform=ToTensor()
-    )
-
-    # TODO: pass to a client only its portion of dataset and not the entire dataset
+def client_fn(cid, datasets, batch_size, device, base_path):
+    train_dataset = datasets[0][cid]
+    test_dataset = datasets[0][cid]
 
     train_loader = DataLoader(
         train_dataset, batch_size, shuffle=True, num_workers=4, pin_memory=True
@@ -81,6 +75,9 @@ def main(cfg):
     lr = cfg.lr
     batch_size = cfg.batch_size
     device = cfg.device
+    divergence = cfg.divergence
+    dataset = cfg.dataset
+    download_path = cfg.dataset_download_path
 
     model = LeNet()
 
@@ -100,18 +97,26 @@ def main(cfg):
         on_fit_config_fn=fit_config_fn({"epochs": epochs, "learning_rate": lr}),
         initial_parameters=weights_to_parameters(model.get_weights()),
     )
-
+    # Define client_ids
     clients_ids = np.arange(n_clients)
+
+    # Define Datasets
+    distribute_dataset = DistributeDataset(dataset,
+                                           download_path,
+                                           n_clients=n_clients)
+
+    datasets = distribute_dataset.divide_dataset(divergence)
 
     # Start simulation
     fl.simulation.start_simulation(
-        client_fn=lambda cid: client_fn(cid, batch_size, device, n_clients),
+        client_fn=lambda cid: client_fn(cid, datasets,  batch_size, device, download_path),
         clients_ids=clients_ids,
         num_clients=n_clients,
         num_rounds=n_rounds,
         client_resources={"num_cpus": 2},
         strategy=strategy,
     )
+    #client_fn(0, datasets, batch_size, device, download_path)
 
 
 if __name__ == "__main__":
