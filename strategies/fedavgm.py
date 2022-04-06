@@ -17,13 +17,11 @@
 Paper: https://arxiv.org/pdf/1909.06335.pdf
 """
 
-
 from logging import WARNING
 from typing import Callable, Dict, List, Optional, Tuple
 
 from flwr.common import (
     FitRes,
-    # MetricsAggregationFn,
     Parameters,
     Scalar,
     Weights,
@@ -34,8 +32,8 @@ from flwr.common.logger import log
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 
-from flwr.server.strategy import aggregate
-from flwr.server.strategy import FedAvg
+from .fedavg import _FedAvg
+from .aggregate import aggregate, MetricsAggregationFn
 
 WARNING_MIN_AVAILABLE_CLIENTS_TOO_LOW = """
 Setting `min_available_clients` lower than `min_fit_clients` or
@@ -45,7 +43,7 @@ than or equal to the values of `min_fit_clients` and `min_eval_clients`.
 """
 
 
-class FedAvgM(FedAvg):
+class FedAvgM(_FedAvg):
     """Configurable FedAvg with Momentum strategy implementation."""
 
     # pylint: disable=too-many-arguments,too-many-instance-attributes
@@ -64,8 +62,8 @@ class FedAvgM(FedAvg):
         on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
         accept_failures: bool = True,
         initial_parameters: Optional[Parameters] = None,
-        # fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
-        # evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
         server_learning_rate: float = 1.0,
         server_momentum: float = 0.0,
     ) -> None:
@@ -119,8 +117,8 @@ class FedAvgM(FedAvg):
             on_evaluate_config_fn=on_evaluate_config_fn,
             accept_failures=accept_failures,
             initial_parameters=initial_parameters,
-            # fit_metrics_aggregation_fn=fit_metrics_aggregation_fn,
-            # evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,
+            fit_metrics_aggregation_fn=fit_metrics_aggregation_fn,
+            evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,
         )
         self.server_learning_rate = server_learning_rate
         self.server_momentum = server_momentum
@@ -128,8 +126,8 @@ class FedAvgM(FedAvg):
             self.server_learning_rate != 1.0
         )
         self.momentum_vector: Optional[Weights] = None
-        # self.fit_metrics_aggregation_fn = fit_metrics_aggregation_fn
-        # self.evaluate_metrics_aggregation_fn = evaluate_metrics_aggregation_fn
+        self.fit_metrics_aggregation_fn = fit_metrics_aggregation_fn
+        self.evaluate_metrics_aggregation_fn = evaluate_metrics_aggregation_fn
 
     def __repr__(self) -> str:
         rep = f"FedAvgM(accept_failures={self.accept_failures})"
@@ -188,7 +186,7 @@ class FedAvgM(FedAvg):
                 else:
                     self.momentum_vector = pseudo_gradient
 
-                # No nesterov for now
+                # No Nesterov for now
                 pseudo_gradient = self.momentum_vector
 
             # SGD
@@ -203,10 +201,10 @@ class FedAvgM(FedAvg):
 
         # Aggregate custom metrics if aggregation fn was provided
         metrics_aggregated = {}
-        # if self.fit_metrics_aggregation_fn:
-        #     fit_metrics = [(res.num_examples, res.metrics) for _, res in results]
-        #     metrics_aggregated = self.fit_metrics_aggregation_fn(fit_metrics)
-        # elif rnd == 1:
-        #     log(WARNING, "No fit_metrics_aggregation_fn provided")
+        if self.fit_metrics_aggregation_fn:
+            fit_metrics = [(res.num_examples, res.metrics) for _, res in results]
+            metrics_aggregated = self.fit_metrics_aggregation_fn(fit_metrics)
+        elif rnd == 1:
+            log(WARNING, "No fit_metrics_aggregation_fn provided")
 
         return parameters_aggregated, metrics_aggregated

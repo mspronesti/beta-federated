@@ -5,10 +5,11 @@ import hydra
 import numpy as np
 import torch.nn
 from flwr.common import weights_to_parameters
-from flwr.server.strategy import FedAvg
+
+# from flwr.server.strategy import FedAvg
 from torch.utils.data.dataloader import DataLoader
 
-# from strategies import FedAvgM
+from strategies import FedAvgM
 
 
 from client import TorchClient
@@ -80,7 +81,7 @@ def main(cfg):
     model = LeNet()
 
     # Define strategy
-    strategy = FedAvg(
+    strategy = FedAvgM(
         fraction_fit=fraction,  # Sample 10% of available clients for the next round
         min_fit_clients=int(
             n_clients * fraction
@@ -89,9 +90,9 @@ def main(cfg):
             n_clients * fraction
         ),  # Minimum number of clients that need to be
         min_eval_clients=int(n_clients * fraction),
+        server_momentum=1.0e-9,
         # connected to the server before a
         # training round can start
-        # server_momentum=0.9,  # TO BE CHANGED
         on_fit_config_fn=fit_config_fn({"epochs": epochs, "learning_rate": lr}),
         initial_parameters=weights_to_parameters(model.get_weights()),
     )
