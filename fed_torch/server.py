@@ -56,16 +56,16 @@ def fit_config_fn(args: Dict):
     return fit_config
 
 
-def set_all_seeds(seed):
+def set_all_seeds(seed, cuda=False):
     torch.manual_seed(seed)
-    # torch.cuda.manual_seed_all(seed)
+    if cuda:
+        torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
 
 
 @hydra.main(config_path="../config/", config_name="config.yaml")
 def main(cfg):
-    set_all_seeds(cfg.seed)
-
+    # parsing hydra configs
     n_rounds = cfg.n_rounds
     fraction = cfg.fraction
     n_clients = cfg.n_clients
@@ -76,6 +76,9 @@ def main(cfg):
     divergence = cfg.divergence
     dataset = cfg.dataset
     download_path = cfg.dataset_download_path
+
+    cuda = device == "cuda" and torch.cuda.is_available()
+    set_all_seeds(cfg.seed, cuda)
 
     # TODO: parametrize this!
     model = LeNet()

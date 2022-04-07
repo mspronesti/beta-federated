@@ -1,7 +1,7 @@
 device: 'cpu'
-# device: 'cuda: 0'
+# device: 'cuda'
 dataset: cifar10
-dataset_download_path: ../../datasets/data/
+dataset_download_path: ${hydra:runtime.cwd}/../datasets/data/
 divergence: 0
 n_rounds: 1
 epochs: 50 # increase this
