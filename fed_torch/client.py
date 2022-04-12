@@ -47,7 +47,7 @@ class TorchClient(fl.client.Client):
                 (which must stay at client level)
             device:
                 a string identifying a valid torch device.
-                Admitted values: cpu, cuda,
+                Admitted values: cpu, cuda,from logger import logger
         """
         self.id = client_id
         self.model = model.to(device)
@@ -136,7 +136,10 @@ class TorchClient(fl.client.Client):
                 optimizer.step()
 
                 epoch_loss += loss.item()
+
+            epoch_loss = epoch_loss / len(self.train_dataloader)
             logger.info(f"Epoch: {epoch}/{epochs}, Loss: {epoch_loss}")
+
         # retrieve total number of training samples
         return num_examples
 

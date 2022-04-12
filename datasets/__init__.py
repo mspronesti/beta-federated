@@ -1,11 +1,10 @@
-from .distribute_dataset import DistributeDataset
+
 from .cifar_local_dataset import CifarLocalDataset
 from .mnist_local_dataset import MnistLocalDataset
-from .local_dataset import LocalDataset
+from .client_distribution import DistributeUniform
 
 __all__ = [
-    "DistributeDataset",
+    "DistributeUniform",
     "CifarLocalDataset",
-    "LocalDataset",
     "MnistLocalDataset"
 ]

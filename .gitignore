@@ -105,7 +105,7 @@ venv.bak/
 cython_debug/
 
 # datasets
-datasets/data/
+data/
 
 # hydra
 output/

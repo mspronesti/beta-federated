@@ -5,17 +5,13 @@ import hydra
 import numpy as np
 import torch.nn
 from flwr.common import weights_to_parameters
-
 # from flwr.server.strategy import FedAvg
 from torch.utils.data.dataloader import DataLoader
-
 from strategies import FedAvgM
-
 
 from client import TorchClient
 
-# from datasets import DistributeDataset
-from datasets import DistributeDataset
+from datasets import DistributeUniform
 from models import LeNet
 
 
@@ -66,16 +62,18 @@ def set_all_seeds(seed, cuda=False):
 @hydra.main(config_path="../config/", config_name="config.yaml")
 def main(cfg):
     # parsing hydra configs
-    n_rounds = cfg.n_rounds
-    fraction = cfg.fraction
-    n_clients = cfg.n_clients
-    epochs = cfg.epochs
-    lr = cfg.lr
-    batch_size = cfg.batch_size
     device = cfg.device
-    divergence = cfg.divergence
     dataset = cfg.dataset
+
     download_path = cfg.dataset_download_path
+
+    n_rounds = cfg.fed_torch.n_rounds
+    fraction = cfg.fed_torch.fraction
+    n_clients = cfg.fed_torch.n_clients
+    epochs = cfg.fed_torch.epochs
+    lr = cfg.fed_torch.lr
+    batch_size = cfg.fed_torch.batch_size
+    divergence = cfg.fed_torch.divergence
 
     cuda = device == "cuda" and torch.cuda.is_available()
     set_all_seeds(cfg.seed, cuda)
@@ -103,7 +101,7 @@ def main(cfg):
     clients_ids = np.arange(n_clients)
 
     # Define Datasets
-    distribute_dataset = DistributeDataset(dataset, download_path, n_clients=n_clients)
+    distribute_dataset = DistributeUniform(dataset, download_path, n_clients=n_clients)
 
     datasets = distribute_dataset.divide_dataset(divergence)
 
