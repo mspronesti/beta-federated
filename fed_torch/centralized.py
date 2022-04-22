@@ -31,7 +31,7 @@ class BuildModel(Enum):
             raise ModelError(value)
 
 
-class CentralizedRun:
+class CentralizedNet:
     def __init__(self,
                  model_name,
                  lr,
@@ -67,8 +67,6 @@ class CentralizedRun:
         self.model = BuildModel[dataset.upper()].value
 
     def fit(self):
-        print('%%%%% start training %%%%%')
-
         criterion = CrossEntropyLoss()
         optimizer = optim.SGD(self.model.parameters(),
                               self.lr,
@@ -133,7 +131,7 @@ class CentralizedRun:
 @hydra.main(config_path="../config/", config_name="config.yaml")
 def main(cfg):
 
-    centralized = CentralizedRun(
+    centralized = CentralizedNet(
         'Lenet',
         cfg.fed_torch.lr,
         cfg.fed_torch.epochs,

@@ -5,4 +5,4 @@ lr: 0.001
 n_clients: 3 # increase this
 n_rounds: 1
 fraction: 0.8
-divergence: 0
+divergence: 0.4

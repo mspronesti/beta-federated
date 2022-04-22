@@ -1,5 +1,3 @@
-import hydra
-
 from .distribute_dataset import DistributeDataset
 import numpy as np
 
@@ -39,8 +37,8 @@ class DistributeUniform(DistributeDataset):
                 client_class_e,
                 replace=False
             )
-            for l in range(n_label)
-            for _ in range(n_clients)
+            for l in range(n_label)  # outer loop
+            for _ in range(n_clients)  # inner loop
         ]
 
         return np.reshape(matrix_class_client, (n_label, n_clients, client_class_e))

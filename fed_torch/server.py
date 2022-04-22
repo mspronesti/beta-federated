@@ -7,12 +7,11 @@ import torch.nn
 from flwr.common import weights_to_parameters
 # from flwr.server.strategy import FedAvg
 from torch.utils.data.dataloader import DataLoader
-from strategies import FedAvgM
 
 from client import TorchClient
-
-from datasets import DistributeUniform
+from datasets import DistributeUniform, DistributeDivergence
 from models import LeNet
+from strategies import FedAvgM
 
 
 def client_fn(cid, datasets, batch_size, device):
@@ -101,7 +100,10 @@ def main(cfg):
     clients_ids = np.arange(n_clients)
 
     # Define Datasets
-    distribute_dataset = DistributeUniform(dataset, download_path, n_clients=n_clients)
+    if divergence:
+        distribute_dataset = DistributeDivergence(dataset, download_path, n_clients)
+    else:
+        distribute_dataset = DistributeUniform(dataset, download_path, n_clients)
 
     datasets = distribute_dataset.divide_dataset(divergence)
 

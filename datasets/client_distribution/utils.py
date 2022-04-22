@@ -37,7 +37,7 @@ def create_local_dataset(
         class_clients_mat: np.array,
         data: np.array,
         labels: np.array,
-        local_dataset: LocalDataset
+        local_dataset
 ):
     """
     Args:
@@ -50,19 +50,20 @@ def create_local_dataset(
         local_dataset (Any):
             the dataset class used in the training
     """
-
+    # row clients, column labels
+    class_clients_mat = class_clients_mat.transpose()
     client_datasets = []
-    for j in range(class_clients_mat.shape[1]):
-        client_indexes = class_clients_mat[:, j, :].flatten()
+    for j, client in enumerate(class_clients_mat):
+        client_indexes = np.hstack(client).astype(int)
 
-        unique_labels_count = np.unique(labels)
+        unique_labels_count = np.unique(labels[client_indexes])
 
         dataset = local_dataset(
-                    data[client_indexes],
-                    labels[client_indexes],
-                    unique_labels_count,
-                    client_id=j
-                )
+            data[client_indexes],
+            labels[client_indexes],
+            unique_labels_count,
+            client_id=j
+        )
 
         client_datasets.append(dataset)
 

@@ -1,12 +1,15 @@
-from typing import Tuple, List
 from abc import ABC, abstractmethod
+from typing import Tuple, List
+
 import numpy as np
+
 from .utils import check_dataset_name, create_local_dataset
 from ..local_dataset import LocalDataset
-from enum import Enum
+
 
 class NumberClientsError(Exception):
     """ error presents in the DistributeDataset class"""
+
     def __init__(self, n_clients):
         self.clients = n_clients
         self.message = f"Number of clients must be at least 1, got {n_clients}"
@@ -15,6 +18,7 @@ class NumberClientsError(Exception):
 
 class DivergenceError(Exception):
     """ error presents in the DistributeDataset class"""
+
     def __init__(self, divergence):
         self.divergence = divergence
         self.message = f"divergence must be between 0 and 1, got {divergence}"
@@ -27,8 +31,9 @@ class DistributeDataset(ABC):
             self,
             dataset: str,
             download_path: str,
+            n_clients: int,
             download=True,
-            n_clients=1,
+
     ):
         """
         Args:
@@ -51,7 +56,6 @@ class DistributeDataset(ABC):
         self.divergence = None  # divergence for distribute the dataset
         self.client_test = None  # list of test client datasets
         self.client_train = None  # list of train client datasets
-
         if n_clients < 0:
             raise NumberClientsError(n_clients)
 
@@ -85,7 +89,8 @@ class DistributeDataset(ABC):
         return train, test
 
     def divide_dataset(self,
-                       divergence: float) -> Tuple[List[LocalDataset], List[LocalDataset]]:
+                       divergence: float,
+                       ) -> Tuple[List[LocalDataset], List[LocalDataset]]:
         """
         divide the datasets according to the divergence.
         - 0 means to have (mostly) a uniform distribution of the classes among clients
@@ -95,7 +100,6 @@ class DistributeDataset(ABC):
         Args:
             divergence:
                 Float, how spread are the classes [0,1]
-
         Returns:
             the list of train and test local dataset for each client
 
@@ -106,10 +110,7 @@ class DistributeDataset(ABC):
         self.divergence = divergence
 
         # split the dataset according to the divergence
-        if self.divergence == 0:
-            class_clients = self.get_index()
-        else:
-            class_clients = self.get_index(b=2)
+        class_clients = self.get_index(divergence)
 
         # creates the local datasets
         client_train = create_local_dataset(
@@ -120,7 +121,7 @@ class DistributeDataset(ABC):
 
         client_test = create_local_dataset(
             class_clients[1],
-            self.train.data, np.array(self.train.targets),
+            self.test.data, np.array(self.test.targets),
             self.local_dataset
         )
         self.client_train = client_train
@@ -129,20 +130,18 @@ class DistributeDataset(ABC):
         return client_train, client_test
 
     def get_index(self,
-                  b: float = None):
+                  divergence: float = None
+                  ):
         """
         Calculates the indexes for each client. The indexes are then used to sample
         from the entire dataset.
-
         Args:
-            b:
+            divergence:
                 the "beta" parameter of the Beta distributions
-
         Returns:
             class_client_mat:
                 shape=(self.train.classes, self.n_client, class_elements_per_client)
         """
-
         # get the sorted index of the classes
         # [0,0,..0, 1,1,...,1, 2,2...9]
         sort_classes_train = np.argsort(self.train.targets)
@@ -154,7 +153,7 @@ class DistributeDataset(ABC):
             len(self.train.classes),
             self.size_class_train,
             self.n_clients,
-            b
+            divergence,
             # TODO check: not all class in training
         )
         class_client_test = self.strategy(
@@ -163,13 +162,11 @@ class DistributeDataset(ABC):
             len(self.test.classes),
             self.size_class_test,
             self.n_clients,
-            b
-        )
+            divergence,
+            )
 
         return class_client_train, class_client_test
 
     @abstractmethod
     def strategy(self, *args):
         pass
-
-
