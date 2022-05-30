@@ -201,4 +201,4 @@ class TestDivergence:
 
         for output, e in zip(o, expected):
             for o_v, e_v in zip(output, e):
-                assert all(o_v == e_v)
+                assert np.all(o_v == e_v)
