@@ -1,14 +1,9 @@
-device: 'cpu'
-# device: 'cuda: 0'
+defaults:
+  - fed_torch: decentralized
+
+dataset_download_path: ${hydra:runtime.cwd}/../data/
 dataset: cifar10
-dataset_download_path: ../../datasets/data/
-divergence: 0
-n_rounds: 1
-epochs: 50 # increase this
-n_clients: 3 # increase this
-fraction: 0.8
-batch_size: 16
-lr: 0.001
+device: 'cpu'
 
 seed: 2022
 root: ${hydra:runtime.cwd}

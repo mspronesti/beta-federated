@@ -4,4 +4,3 @@ flwr[simulation]>=0.17
 hydra-core>=1.1.1
 numpy~=1.22.3
 Pillow~=9.0.1
-Hydra~=2.5
