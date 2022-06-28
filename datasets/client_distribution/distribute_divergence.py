@@ -8,21 +8,22 @@ from scipy.stats import beta, entropy
 
 class HeuristicError(Exception):
     def __init__(self):
-        self.message = f"The heuristics was not able to find the correct split"
+        self.message = "The heuristics was not able to find the correct split"
         super().__init__(self.message)
 
 
 class DistributeDivergence(DistributeDataset):
     # Todo: define max elements
     # Todo: define min elements
-    def strategy(self,
-                 client_class_e: int,
-                 sort_label: List[int],
-                 n_label: int,
-                 size_class: int,
-                 n_clients: int,
-                 divergence: float,
-                 ):
+    def strategy(
+        self,
+        client_class_e: int,
+        sort_label: List[int],
+        n_label: int,
+        size_class: int,
+        n_clients: int,
+        divergence: float,
+    ):
         """
         Each element of the returned table contains the list of index associated
         with the i_th class for the j_th client
@@ -52,9 +53,7 @@ class DistributeDivergence(DistributeDataset):
 
         matrix_class_client = [
             np.random.choice(  # TODO add: implement generator with fixed seed
-                sort_label[l * size_class: (l + 1) * size_class],
-                client,
-                replace=False
+                sort_label[l * size_class : (l + 1) * size_class], client, replace=False
             )
             for l, clients in enumerate(elements)
             for client in clients
@@ -62,8 +61,9 @@ class DistributeDivergence(DistributeDataset):
         return np.reshape(matrix_class_client, (n_label, n_clients))
 
     @classmethod
-    def heuristic(cls, n_clients: int, n_label: int, size_class: int, divergence: float
-                  ) -> List[List]:
+    def heuristic(
+        cls, n_clients: int, n_label: int, size_class: int, divergence: float
+    ) -> List[List]:
         """
         It returns per each client, the number of elements per each class.
         The split of the dataset is computed according to the divergence
@@ -91,7 +91,7 @@ class DistributeDivergence(DistributeDataset):
 
         sets = np.linspace(0, 1, n_clients + 1)
         # default b creates gaussians
-        params = np.array([(2., 2.) for _ in range(n_label)])
+        params = np.array([(2.0, 2.0) for _ in range(n_label)])
         step = 1
         while True:
             label_percentages = cls.get_percentages(params, sets)
@@ -102,7 +102,7 @@ class DistributeDivergence(DistributeDataset):
 
             # Stop condition
             if math.isclose(mean_entropy, 1 - divergence, rel_tol=0.1):
-                return elements.astype('int16')
+                return elements.astype("int16")
 
             # if already passed there is no need to go until entropy=0
             if mean_entropy < 1 - divergence:
@@ -119,8 +119,9 @@ class DistributeDivergence(DistributeDataset):
                 raise HeuristicError()
 
     @staticmethod
-    def update_step(params: List[Tuple], step: int, mean_entropy: float
-                    ) -> Tuple[List[Tuple], int]:
+    def update_step(
+        params: List[Tuple], step: int, mean_entropy: float
+    ) -> Tuple[List[Tuple], int]:
         """
         When an iteration is completed:
             - reset to default the params
@@ -141,15 +142,14 @@ class DistributeDivergence(DistributeDataset):
         max_b = params[0][1]
         max_a = params[-1][0]
         # divergence > 0.5
-        if (max_b >= 30 or max_a >= 30) or mean_entropy == 0:
+        if (max_b >= 100 or max_a >= 100) or mean_entropy == 0:
             params = [(2, 2)] * len(params)
             step -= 0.2
 
         return params, step
 
     @staticmethod
-    def update_params(params: List[Tuple], step: int
-                      ) -> List[Tuple]:
+    def update_params(params: List[Tuple], step: int) -> List[Tuple]:
         """
         update the params according to the step size.
         first half of the array updates the "b" param i.e. skew distribution to the left
@@ -163,22 +163,17 @@ class DistributeDivergence(DistributeDataset):
         """
         l = len(params) // 2
 
-        left = [
-            (a, b + step * (l - i))
-            for i, (a, b) in enumerate(params[:l])
-        ]
+        left = [(a, b + step * (l - i)) for i, (a, b) in enumerate(params[:l])]
 
-        right = [
-            (a + step * i, b)
-            for i, (a, b) in enumerate(params[l:])
-        ]
+        right = [(a + step * i, b) for i, (a, b) in enumerate(params[l:])]
 
         params = left + right
         return params
 
     @staticmethod
-    def get_entropies(label_percentages: List[List], size_class: int
-                      ) -> Tuple[np.array, np.array, np.array]:
+    def get_entropies(
+        label_percentages: List[List], size_class: int
+    ) -> Tuple[np.array, np.array, np.array]:
         """
         given the percentages for each client and the total element in a class,
         calculate the entropy associated for each client
@@ -211,9 +206,7 @@ class DistributeDivergence(DistributeDataset):
         return entropies, probs, class_elements
 
     @staticmethod
-    def get_percentages(params: np.array,
-                        sets: np.array
-                        ) -> List[List[float]]:
+    def get_percentages(params: np.array, sets: np.array) -> List[List[float]]:
         """
         calculate the integral of the beta distributions in each set
         a set is the area expressed by two adjacent points on the x-axis
@@ -231,7 +224,8 @@ class DistributeDivergence(DistributeDataset):
             # calculate the area from 0 to x
             beta_cdf = beta.cdf(sets, a, b)
             # calculate the area from x to x+1
-            beta_areas = [beta_cdf[i + 1] - beta_cdf[i]
-                          for i in range(len(beta_cdf) - 1)]
+            beta_areas = [
+                beta_cdf[i + 1] - beta_cdf[i] for i in range(len(beta_cdf) - 1)
+            ]
             label_percentages.append(beta_areas)
         return label_percentages

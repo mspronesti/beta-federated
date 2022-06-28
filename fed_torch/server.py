@@ -1,10 +1,11 @@
-from typing import Dict
+from typing import Dict, Tuple, List
 
 import flwr as fl
 import hydra
 import numpy as np
 import torch.nn
-from flwr.common import weights_to_parameters
+from flwr.common import weights_to_parameters, Metrics
+
 # from flwr.server.strategy import FedAvg
 from torch.utils.data.dataloader import DataLoader
 
@@ -58,6 +59,16 @@ def set_all_seeds(seed, cuda=False):
     np.random.seed(seed)
 
 
+# Define metric aggregation function
+def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+    # Multiply accuracy of each client by number of examples used
+    accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
+    examples = [num_examples for num_examples, _ in metrics]
+
+    # Aggregate and return custom metric (weighted average)
+    return {"accuracy": sum(accuracies) / sum(examples)}
+
+
 @hydra.main(config_path="../config/", config_name="config.yaml")
 def main(cfg):
     # parsing hydra configs
@@ -95,6 +106,7 @@ def main(cfg):
         # training round can start
         on_fit_config_fn=fit_config_fn({"epochs": epochs, "learning_rate": lr}),
         initial_parameters=weights_to_parameters(model.get_weights()),
+        evaluate_metrics_aggregation_fn=weighted_average,
     )
     # Define client_ids
     clients_ids = np.arange(n_clients)

@@ -245,5 +245,5 @@ class TorchClient(fl.client.Client):
         return EvaluateRes(
             loss=loss,
             num_examples=num_examples,
-            metrics={"metrics": accuracy},  # must be a dictionary
+            metrics={"accuracy": accuracy},  # must be a dictionary
         )

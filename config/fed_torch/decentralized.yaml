@@ -1,8 +1,8 @@
-epochs: 50 # increase this
+epochs: 5 # increase this
 batch_size: 16
 lr: 0.001
 
-n_clients: 3 # increase this
+n_clients: 10 # increase this
 n_rounds: 1
 fraction: 0.8
-divergence: 0.4
+divergence: 0.1
